@@ -58,6 +58,7 @@ class MyMainWindow(QtWidgets.QWidget):
             else:
                 self.gasmix.open_valve_close_others(next(self.gas_iterator))
                 self.timer.timeout.connect(self._cycle)
+                self.start()
 
     def stop_cycle(self):
         self.stopped = True
