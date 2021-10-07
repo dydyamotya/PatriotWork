@@ -1,7 +1,7 @@
 import itertools
 import sys
 
-from PySide6 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore
 
 from gasmix import GasMix, GasMixException
 
