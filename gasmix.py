@@ -30,3 +30,6 @@ class GasMix:
 
     def set_port(self, port: str):
         self.ser.port = port
+
+    def close(self):
+        self.ser.close()

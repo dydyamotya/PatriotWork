@@ -4,6 +4,7 @@ import sys
 from PySide2 import QtWidgets, QtCore
 
 from gasmix import GasMix, GasMixException
+from functools import partial
 
 
 class MyMainWindow(QtWidgets.QWidget):
@@ -15,11 +16,13 @@ class MyMainWindow(QtWidgets.QWidget):
         self.gas_iterator = itertools.cycle((2, 0, 2, 1))
 
     def _init_gui(self):
+
+        main_layout = QtWidgets.QVBoxLayout(self)
         layout = QtWidgets.QFormLayout()
 
         self.timer = QtCore.QTimer()
 
-        self.setLayout(layout)
+        main_layout.addLayout(layout)
 
         self.gas_cycle_time = QtWidgets.QLineEdit()
         self.comport = QtWidgets.QLineEdit()
@@ -27,12 +30,29 @@ class MyMainWindow(QtWidgets.QWidget):
         self.toggle_button.clicked.connect(self.toggle)
         self.current_gas = QtWidgets.QLabel()
 
+        buttons_layout = QtWidgets.QVBoxLayout()
+        for i in range(3):
+            button = QtWidgets.QPushButton(text=str(i))
+            button.clicked.connect(partial(self.choose_gas, i))
+            buttons_layout.addWidget(button)
+
         layout.addRow("Cycle time", self.gas_cycle_time)
         layout.addRow("Comport", self.comport)
         layout.addWidget(self.toggle_button)
         layout.addRow("Current gas", self.current_gas)
+        main_layout.addLayout(buttons_layout)
 
         self.show()
+
+    def choose_gas(self, i):
+        if self.stopped:
+            try:
+                self.gasmix = GasMix(port=self.comport.text(), unit_num=11)
+            except GasMixException:
+                pass
+            else:
+                self.gasmix.open_valve_close_others(i)
+                self.gasmix.close()
 
     def toggle(self):
         if self.stopped:
