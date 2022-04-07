@@ -13,22 +13,27 @@ class MyMainWindow(QtWidgets.QWidget):
         self.stopped = True
         self._init_gui()
         self.gasmix = None
-        self.gas_iterator = itertools.cycle((2, 0, 2, 1))
+        self.gas_iterator = None
+        self.timer = None
 
     def _init_gui(self):
 
         main_layout = QtWidgets.QVBoxLayout(self)
         layout = QtWidgets.QFormLayout()
 
-        self.timer = QtCore.QTimer()
-
         main_layout.addLayout(layout)
+
+        self.second_timer = QtCore.QTimer()
+        self.second_timer.setInterval(1000)
+        self.second_timer.timeout.connect(self.check_state)
+        self.second_timer.start()
 
         self.gas_cycle_time = QtWidgets.QLineEdit()
         self.comport = QtWidgets.QLineEdit()
         self.toggle_button = QtWidgets.QPushButton(text="Start")
         self.toggle_button.clicked.connect(self.toggle)
         self.current_gas = QtWidgets.QLabel()
+        self.current_time = QtWidgets.QLabel()
 
         buttons_layout = QtWidgets.QVBoxLayout()
         for i in range(3):
@@ -40,6 +45,7 @@ class MyMainWindow(QtWidgets.QWidget):
         layout.addRow("Comport", self.comport)
         layout.addWidget(self.toggle_button)
         layout.addRow("Current gas", self.current_gas)
+        layout.addRow("Remaining time", self.current_time)
         main_layout.addLayout(buttons_layout)
 
         self.show()
@@ -47,12 +53,12 @@ class MyMainWindow(QtWidgets.QWidget):
     def choose_gas(self, i):
         if self.stopped:
             try:
-                self.gasmix = GasMix(port=self.comport.text(), unit_num=11)
+                gasmix = GasMix(port=self.comport.text(), unit_num=11)
             except GasMixException:
                 pass
             else:
-                self.gasmix.open_valve_close_others(i)
-                self.gasmix.close()
+                gasmix.open_valve_close_others(i)
+                gasmix.close()
 
     def toggle(self):
         if self.stopped:
@@ -64,6 +70,8 @@ class MyMainWindow(QtWidgets.QWidget):
 
     def start_cycle(self):
         self.stopped = False
+        self.gas_iterator = itertools.cycle((2, 0, 2, 1))
+        self.timer = QtCore.QTimer()
 
         try:
             period = int(self.gas_cycle_time.text())
@@ -76,13 +84,16 @@ class MyMainWindow(QtWidgets.QWidget):
             except GasMixException:
                 self.error_start()
             else:
-                self.gasmix.open_valve_close_others(next(self.gas_iterator))
+                self._cycle()
                 self.timer.timeout.connect(self._cycle)
                 self.timer.start()
 
     def stop_cycle(self):
         self.stopped = True
         self.timer.stop()
+        self.timer = None
+        self.gasmix.close()
+        self.gasmix = None
 
     def error_start(self):
         self.toggle_button.setText("Start")
@@ -92,6 +103,15 @@ class MyMainWindow(QtWidgets.QWidget):
         gas = next(self.gas_iterator)
         self.gasmix.open_valve_close_others(gas)
         self.current_gas.setText(str(gas))
+
+    def check_state(self):
+        if not self.stopped:
+            try:
+                remain_time = self.timer.remainingTime() // 1000
+            except AttributeError:
+                self.current_time.setText("Cant read")
+            else:
+                self.current_time.setText(str(remain_time))
 
 
 if __name__ == '__main__':
